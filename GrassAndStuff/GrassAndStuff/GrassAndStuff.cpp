@@ -18,7 +18,7 @@ const float MAX = 10000.0;
 const float K_R = 0.166;
 const float K_M = 0.0025;
 const float E = 14.3; 						// intensity
-//const vec3  C_R = vec3( 0.3, 0.7, 1.0 ); 	// 1 / wavelength ^ 4
+const glm::vec3  C_R = glm::vec3( 0.3, 0.7, 1.0 ); 	// 1 / wavelength ^ 4
 const float G_M = -0.85;					// Mie g
 
 const GLdouble Skydomeradius = 0.75;

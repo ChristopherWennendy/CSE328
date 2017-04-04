@@ -4,6 +4,13 @@
 
 #include "GrassAndStuff.h"
 
+static int win(0); //The gl window
+static double win_width(750.0); //Width and Height
+static double win_length(750.0);
+static int menu_id; //Menu Attached to Right Click
+//Flag to set whether a vertex has been chosen to deform or not
+static int deformflag(0);
+
 double intensity(){
 
 }

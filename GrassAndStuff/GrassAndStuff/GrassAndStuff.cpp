@@ -32,6 +32,8 @@ static float g_lightPosition[NUM_LIGHTS * 3];
 static float g_lightColor[NUM_LIGHTS * 3];
 static float g_lightRotation;
 
+float global_time = 0;
+
 void Display(){
 	glClear(GL_COLOR_BUFFER_BIT);
 	
@@ -41,6 +43,10 @@ void Display(){
 	/*glUniform3fv(g_programCameraPositionLocation, 1, g_cameraPosition);
 	glUniform3fv(g_programLightPositionLocation, NUM_LIGHTS, g_lightPosition);
 	glUniform3fv(g_programLightColorLocation, NUM_LIGHTS, g_lightColor); */
+
+	global_time += 0.01;
+	GLuint time_loc = glGetUniformLocation(g_program, "iGlobalTime");
+	glUniform1f(time_loc, global_time);
 
 	GLUquadricObj* qobj;
 	qobj = gluNewQuadric();
@@ -338,7 +344,7 @@ int main(int argc, char* argv[]){
 	
 	//Display, Mouse, and Menu
 	glutDisplayFunc(Display);
-	//glutIdleFunc(sceneCycle);
+	glutIdleFunc(sceneCycle);
 	//glutMouseFunc(Mouse);
 	//glutKeyboardFunc(Keyboard);
 	//CreateMenu(); 

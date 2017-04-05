@@ -1,6 +1,5 @@
 #version 330 core
 
-uniform vec3      iResolution;  
 uniform float     iGlobalTime;
 
 // math const
@@ -139,7 +138,7 @@ void main(){
 	vec3 eye = vec3( 0.0, 0.0, 2.4 );
 
 	// rotate camera
-	mat3 rot = rot3xy( vec2( 0.0, 10 * 0.5 ) );
+	mat3 rot = rot3xy( vec2( 0.0, iGlobalTime * 0.5 ) );
 	dir = rot * dir;
 	eye = rot * eye;
 	
@@ -147,19 +146,18 @@ void main(){
 	vec3 l = vec3( 0, 0, 1 );
 			  
 	vec2 e = ray_vs_sphere( eye, dir, R );
-	//if ( e.x > e.y ) {
-		//fragColor = vec4(0.0, 1.0, 0.0, 0.0);;
-	//}
+	if ( e.x > e.y ) {
+		discard;
+	}
 	
-	//vec2 f = ray_vs_sphere( eye, dir, R_INNER );
-	//e.y = min( e.y, f.x );
+	vec2 f = ray_vs_sphere( eye, dir, R_INNER );
+	e.y = min( e.y, f.x );
 
-	//vec3 I = in_scatter( eye, dir, e, l );
+	vec3 I = in_scatter( eye, dir, e, l );
 	
-	//fragColor = vec4( I, 1.0 );
+	fragColor = vec4( I, 1.0 );
 
-	vec2 position = (gl_FragCoord.xy / vec2(750.0, 750.0));
+	//vec2 position = (gl_FragCoord.xy / vec2(750.0, 750.0));
 
-	fragColor = vec4(position.x);	
-	//fragColor = vec4(1.0,0.0,0.0,0.0);
+	//fragColor = vec4(position.x);	
 } 

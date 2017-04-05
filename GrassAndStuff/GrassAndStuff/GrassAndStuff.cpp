@@ -38,29 +38,13 @@ void Display(){
 	glLoadIdentity(); 
 
 	glUseProgram(g_program);
-	glUniform3fv(g_programCameraPositionLocation, 1, g_cameraPosition);
+	/*glUniform3fv(g_programCameraPositionLocation, 1, g_cameraPosition);
 	glUniform3fv(g_programLightPositionLocation, NUM_LIGHTS, g_lightPosition);
-	glUniform3fv(g_programLightColorLocation, NUM_LIGHTS, g_lightColor); 
+	glUniform3fv(g_programLightColorLocation, NUM_LIGHTS, g_lightColor); */
 
 	GLUquadricObj* qobj;
 	qobj = gluNewQuadric();
-
-	GLfloat mat_ambient[] = { 0.5, 0.5, 0.5, 1.0 };
-	GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
-	GLfloat mat_shininess[] = { 50.0 };
-	GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
-	GLfloat model_ambient[] = { 0.5, 0.5, 0.5, 1.0 };
-
 	glClearColor(0.0, 0.0, 0.0, 0.0);
-
-	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
-	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, model_ambient);
-
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
 
 	gluQuadricDrawStyle(qobj, GLU_FILL);
 	gluQuadricNormals(qobj, GLU_SMOOTH);
@@ -125,18 +109,168 @@ void sceneCycle(void){
 	glutPostRedisplay();
 }
 
+std::string readFile(const char *filePath) {
+	std::string content;
+	std::ifstream fileStream(filePath, std::ios::in);
+
+	if (!fileStream.is_open()) {
+		std::cerr << "Could not read file " << filePath << ". File does not exist." << std::endl;
+		return "";
+	}
+
+	std::string line = "";
+	while (!fileStream.eof()) {
+		std::getline(fileStream, line);
+		printf("%s\n", line.c_str());
+		content.append(line + "\n");
+	}
+
+	fileStream.close();
+	return content;
+}
+
+GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_path){
+
+	// Create the shaders
+	GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
+	GLuint FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
+
+	// Read the Vertex Shader code from the file
+	std::string VertexShaderCode;
+	std::ifstream VertexShaderStream(vertex_file_path, std::ios::in);
+	if (VertexShaderStream.is_open()){
+		std::string Line = "";
+		while (getline(VertexShaderStream, Line))
+			VertexShaderCode += "\n" + Line;
+		VertexShaderStream.close();
+	}
+	else{
+		printf("Impossible to open %s. Are you in the right directory ? Don't forget to read the FAQ !\n", vertex_file_path);
+		getchar();
+		return 0;
+	}
+
+	// Read the Fragment Shader code from the file
+	std::string FragmentShaderCode;
+	std::ifstream FragmentShaderStream(fragment_file_path, std::ios::in);
+	if (FragmentShaderStream.is_open()){
+		std::string Line = "";
+		while (getline(FragmentShaderStream, Line))
+			FragmentShaderCode += "\n" + Line;
+		FragmentShaderStream.close();
+	}
+
+	GLint Result = GL_FALSE;
+	int InfoLogLength;
+
+
+	// Compile Vertex Shader
+	printf("Compiling shader : %s\n", vertex_file_path);
+	char const * VertexSourcePointer = VertexShaderCode.c_str();
+	glShaderSource(VertexShaderID, 1, &VertexSourcePointer, NULL);
+	glCompileShader(VertexShaderID);
+
+	// Check Vertex Shader
+	glGetShaderiv(VertexShaderID, GL_COMPILE_STATUS, &Result);
+	glGetShaderiv(VertexShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+	if (InfoLogLength > 0){
+		std::vector<char> VertexShaderErrorMessage(InfoLogLength + 1);
+		glGetShaderInfoLog(VertexShaderID, InfoLogLength, NULL, &VertexShaderErrorMessage[0]);
+		printf("%s\n", &VertexShaderErrorMessage[0]);
+	}
+
+
+
+	// Compile Fragment Shader
+	printf("Compiling shader : %s\n", fragment_file_path);
+	char const * FragmentSourcePointer = FragmentShaderCode.c_str();
+	glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer, NULL);
+	glCompileShader(FragmentShaderID);
+
+	// Check Fragment Shader
+	glGetShaderiv(FragmentShaderID, GL_COMPILE_STATUS, &Result);
+	glGetShaderiv(FragmentShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+	if (InfoLogLength > 0){
+		std::vector<char> FragmentShaderErrorMessage(InfoLogLength + 1);
+		glGetShaderInfoLog(FragmentShaderID, InfoLogLength, NULL, &FragmentShaderErrorMessage[0]);
+		printf("%s\n", &FragmentShaderErrorMessage[0]);
+	}
+
+
+
+	// Link the program
+	printf("Linking program\n");
+	GLuint ProgramID = glCreateProgram();
+	glAttachShader(ProgramID, VertexShaderID);
+	glAttachShader(ProgramID, FragmentShaderID);
+	glLinkProgram(ProgramID);
+
+	// Check the program
+	glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);
+	glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+	if (InfoLogLength > 0){
+		std::vector<char> ProgramErrorMessage(InfoLogLength + 1);
+		glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
+		printf("%s\n", &ProgramErrorMessage[0]);
+	}
+
+
+	glDetachShader(ProgramID, VertexShaderID);
+	glDetachShader(ProgramID, FragmentShaderID);
+
+	glDeleteShader(VertexShaderID);
+	glDeleteShader(FragmentShaderID);
+
+	return ProgramID;
+}
+
+
+
+/*GLuint LoadShader(const char *vertex_path, const char *fragment_path) {
+	GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
+	GLuint vertShader = glCreateShader(GL_VERTEX_SHADER);
+
+	// Read shaders
+	std::string fragShaderStr = readFile(fragment_path);
+	std::string vertShaderStr = readFile(vertex_path);
+	const char *fragShaderSrc = fragShaderStr.c_str();
+	const char *vertShaderSrc = vertShaderStr.c_str();
+
+	// Compile Vertex shader
+	std::cout << "Compiling Vertex shader." << std::endl;
+	glShaderSource(vertShader, 1, &vertShaderSrc, NULL);
+	glCompileShader(vertShader);
+
+	// Compile fragment shader
+	std::cout << "Compiling fragment shader." << std::endl;
+	glShaderSource(fragShader, 1, &fragShaderSrc, NULL);
+	glCompileShader(fragShader);
+
+	GLuint program = glCreateProgram();
+	glAttachShader(program, vertShader);
+	glAttachShader(program, fragShader);
+	glLinkProgram(program);
+
+	glGetProgramiv(program, GL_LINK_STATUS, &result);
+	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength);
+	std::vector<char> programError((logLength > 1) ? logLength : 1);
+	glGetProgramInfoLog(program, logLength, NULL, &programError[0]);
+	std::cout << &programError[0] << std::endl; 
+
+	glDeleteShader(fragShader);
+	glDeleteShader(vertShader);
+
+	return program;
+}*/
 
 void sceneInit(void) {
-	GLint result;
 
 	/* create program object and attach shaders */
-	g_program = glCreateProgram();
-	GLuint shader = glCreateShader(GL_FRAGMENT_SHADER);
-	glAttachShader(g_program, shader);
+	g_program = LoadShaders("../GrassAndStuff/vertex.vp", "../GrassAndStuff/shader.fp");
 
 	/* link the program and make sure that there were no errors */
-	glLinkProgram(g_program);
-	glGetProgramiv(g_program, GL_LINK_STATUS, &result);
+	//glLinkProgram(g_program);
+	//glGetProgramiv(g_program, GL_LINK_STATUS, &result);
 
 	/* get uniform locations */
 	g_programCameraPositionLocation = glGetUniformLocation(g_program, "cameraPosition");
@@ -152,22 +286,22 @@ void sceneInit(void) {
 	GLUquadricObj* qobj;
 	qobj = gluNewQuadric();
 
-	GLfloat mat_ambient[] = { 0.5, 0.5, 0.5, 1.0 };
+	/*GLfloat mat_ambient[] = { 0.5, 0.5, 0.5, 1.0 };
 	GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
 	GLfloat mat_shininess[] = { 50.0 };
 	GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
-	GLfloat model_ambient[] = { 0.5, 0.5, 0.5, 1.0 };
+	GLfloat model_ambient[] = { 0.5, 0.5, 0.5, 1.0 }; */
 
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 
-	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+	/*glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, model_ambient);
 
 	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
+	glEnable(GL_LIGHT0); */
 
 	gluQuadricDrawStyle(qobj, GLU_FILL);
 	gluQuadricNormals(qobj, GLU_SMOOTH);
@@ -182,7 +316,7 @@ void sceneInit(void) {
 	g_cameraPosition[1] = 0.0f;
 	g_cameraPosition[2] = 4.0f;
 	glLoadIdentity();
-	glTranslatef(-g_cameraPosition[0], -g_cameraPosition[1], -g_cameraPosition[2]);
+	glTranslatef(-g_cameraPosition[0], -g_cameraPosition[1], -g_cameraPosition[2]); 
 }
 
 int main(int argc, char* argv[]){
@@ -209,6 +343,6 @@ int main(int argc, char* argv[]){
 	//glutKeyboardFunc(Keyboard);
 	//CreateMenu(); 
 
-	//sceneInit();
+	sceneInit();
 	glutMainLoop();
 }

@@ -44,7 +44,7 @@ void Display(){
 	glUniform3fv(g_programLightPositionLocation, NUM_LIGHTS, g_lightPosition);
 	glUniform3fv(g_programLightColorLocation, NUM_LIGHTS, g_lightColor); */
 
-	global_time += 0.01;
+	global_time += 0.001;
 	GLuint time_loc = glGetUniformLocation(g_program, "iGlobalTime");
 	glUniform1f(time_loc, global_time);
 

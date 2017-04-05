@@ -15,23 +15,6 @@ const float PI = 3.14159265359;
 const float DEG_TO_RAD = PI / 180.0;
 const float MAX = 10000.0;
 
-const float K_R = 0.166;
-const float K_M = 0.0025;
-const float E = 14.3; 						// intensity
-const glm::vec3  C_R = glm::vec3( 0.3, 0.7, 1.0 ); 	// 1 / wavelength ^ 4
-const float G_M = -0.85;					// Mie g
-
-const float R = 1.0;
-const float R_INNER = 0.7;
-const float SCALE_H = 4.0 / (R - R_INNER);
-const float SCALE_L = 1.0 / (R - R_INNER);
-
-const int NUM_OUT_SCATTER = 10;
-const float FNUM_OUT_SCATTER = 10.0;
-
-const int NUM_IN_SCATTER = 10;
-const float FNUM_IN_SCATTER = 10.0;
-
 const GLdouble Skydomeradius = 0.75;
 
 static GLuint g_program;
@@ -49,18 +32,17 @@ static float g_lightPosition[NUM_LIGHTS * 3];
 static float g_lightColor[NUM_LIGHTS * 3];
 static float g_lightRotation;
 
-extern void sceneCycle(void);
-
-double intensity(){
-	return 0.0;
-}
-
 void Display(){
 	glClear(GL_COLOR_BUFFER_BIT);
 	
 	glLoadIdentity(); 
 
-	GLUquadricObj* qobj; 
+	glUseProgram(g_program);
+	glUniform3fv(g_programCameraPositionLocation, 1, g_cameraPosition);
+	glUniform3fv(g_programLightPositionLocation, NUM_LIGHTS, g_lightPosition);
+	glUniform3fv(g_programLightColorLocation, NUM_LIGHTS, g_lightColor); 
+
+	GLUquadricObj* qobj;
 	qobj = gluNewQuadric();
 
 	GLfloat mat_ambient[] = { 0.5, 0.5, 0.5, 1.0 };
@@ -75,7 +57,7 @@ void Display(){
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, model_ambient); 
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, model_ambient);
 
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
@@ -84,13 +66,21 @@ void Display(){
 	gluQuadricNormals(qobj, GLU_SMOOTH);
 	gluSphere(qobj, Skydomeradius, 50, 10);
 
+	glUseProgram(0);
+
+	/*for (int i = 0; i < NUM_LIGHTS; ++i) {
+		glPushMatrix();
+		glTranslatef(g_lightPosition[i * 3 + 0], g_lightPosition[i * 3 + 1], g_lightPosition[i * 3 + 2]);
+		glColor3fv(g_lightColor + (i * 3));
+		glutSolidSphere(0.04, 36, 36);
+		glPopMatrix();
+	} */
+
 	glFlush();
 
 }
 
-static void
-setPerspective(float fov, float aspect, float near, float far)
-{
+static void setPerspective(float fov, float aspect, float near, float far){
 	float f;
 	float mat[16];
 
@@ -119,13 +109,30 @@ setPerspective(float fov, float aspect, float near, float far)
 	glMultMatrixf(mat);
 }
 
+void sceneCycle(void){
+
+	/* update the light positions */
+	g_lightRotation += (PI / 4.0f) * 1;
+	for (int i = 0; i < NUM_LIGHTS; ++i) {
+		const float radius = 1.75f;
+		float r = (((PI * 2.0f) / (float)NUM_LIGHTS) * (float)i) + g_lightRotation;
+
+		g_lightPosition[i * 3 + 0] = cosf(r) * radius;
+		g_lightPosition[i * 3 + 1] = cosf(r) * sinf(r);
+		g_lightPosition[i * 3 + 2] = sinf(r) * radius;
+	}
+
+	glutPostRedisplay();
+}
+
+
 void sceneInit(void) {
 	GLint result;
 
 	/* create program object and attach shaders */
 	g_program = glCreateProgram();
-	//shaderAttachFromFile(g_program, GL_VERTEX_SHADER, "../data/shader.vp");
-	//shaderAttachFromFile(g_program, GL_FRAGMENT_SHADER, "../data/shader.fp");
+	GLuint shader = glCreateShader(GL_FRAGMENT_SHADER);
+	glAttachShader(g_program, shader);
 
 	/* link the program and make sure that there were no errors */
 	glLinkProgram(g_program);
@@ -141,7 +148,7 @@ void sceneInit(void) {
 	g_lightColor[3] = 0.0f; g_lightColor[4] = 1.0f; g_lightColor[5] = 0.0f;
 	g_lightColor[6] = 0.0f; g_lightColor[7] = 0.0f; g_lightColor[8] = 1.0f;
 
-	/* create cylinder */
+	/* create sphere */
 	GLUquadricObj* qobj;
 	qobj = gluNewQuadric();
 
@@ -178,22 +185,6 @@ void sceneInit(void) {
 	glTranslatef(-g_cameraPosition[0], -g_cameraPosition[1], -g_cameraPosition[2]);
 }
 
-void sceneCycle(void){
-
-	/* update the light positions */
-	g_lightRotation += (PI / 4.0f) * 1;
-	for (int i = 0; i < NUM_LIGHTS; ++i) {
-		const float radius = 1.75f;
-		float r = (((PI * 2.0f) / (float)NUM_LIGHTS) * (float)i) + g_lightRotation;
-
-		g_lightPosition[i * 3 + 0] = cosf(r) * radius;
-		g_lightPosition[i * 3 + 1] = cosf(r) * sinf(r);
-		g_lightPosition[i * 3 + 2] = sinf(r) * radius;
-	}
-
-	glutPostRedisplay();
-}
-
 int main(int argc, char* argv[]){
 
 	//Init and create window
@@ -208,16 +199,16 @@ int main(int argc, char* argv[]){
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	setPerspective(PI / 4.0, win_width / win_length, 0.1, 200);
+	//setPerspective(PI / 4.0, win_width / win_length, 0.1, 200);
 	glMatrixMode(GL_MODELVIEW);
 	
 	//Display, Mouse, and Menu
 	glutDisplayFunc(Display);
-	glutIdleFunc(sceneCycle);
+	//glutIdleFunc(sceneCycle);
 	//glutMouseFunc(Mouse);
 	//glutKeyboardFunc(Keyboard);
 	//CreateMenu(); 
 
-	sceneInit();
+	//sceneInit();
 	glutMainLoop();
 }
